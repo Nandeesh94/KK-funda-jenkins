@@ -98,4 +98,79 @@ def notifyBuild(String buildStatus = 'STARTED') {
   slackSend (color: colorCode, message: summary, channel: '#jio-devops')
 }
 
+---------------------------------------------------------------------------------------------------------------------------
+
+
+node {
+    // Define environment variables
+    env.APP_NAME = "jenkins-java-project"
+    env.BRANCH_NAME = "main"
+
+    try {
+        stage('Checkout') {
+            // Checkout from GitHub with credentials
+            git branch: env.BRANCH_NAME,
+                url: 'https://github.com/Nandeesh94/jenkins-java-project.git',
+                credentialsId: 'github-credentials-id'
+        }
+
+        stage('Build') {
+            // Example: Maven build
+            sh '''
+                echo "Building ${APP_NAME}..."
+                mvn clean package -DskipTests
+            '''
+            // Archive build artifacts
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
+
+        stage('Test') {
+            // Run tests in parallel (unit + integration)
+            parallel (
+                UnitTests: {
+                    sh 'mvn test -Dtest=*UnitTest'
+                },
+                IntegrationTests: {
+                    sh 'mvn verify -Dtest=*IntegrationTest'
+                }
+            )
+            junit '**/target/surefire-reports/*.xml'
+        }
+
+        stage('Quality Checks') {
+            // Example: static code analysis
+            sh 'mvn checkstyle:check'
+        }
+
+        stage('Deploy') {
+            // Deploy only if build & tests succeed
+            sh '''
+                echo "Deploying ${APP_NAME}..."
+                # Example: copy JAR to deployment server
+                scp target/*.jar user@server:/opt/apps/
+            '''
+        }
+    }
+    catch (err) {
+        // Handle failures gracefully
+        currentBuild.result = 'FAILURE'
+        echo "❌ Pipeline failed: ${err}"
+        throw err
+    }
+    finally {
+        stage('Post Actions') {
+            // Always run, even if build fails
+            echo "Cleaning up workspace..."
+            deleteDir()
+
+            // Notify team (Slack, email, etc.)
+            emailext (
+                subject: "Jenkins Build: ${currentBuild.fullDisplayName} - ${currentBuild.currentResult}",
+                body: "Check console output at ${env.BUILD_URL}",
+                to: "dev-team@example.com"
+            )
+        }
+    }
+}
+
 
