@@ -39,10 +39,21 @@ C:chown -R jenkins:jenkins /var/lib/jenkins/.m2
 C:chmod 600 /var/lib/jenkins/.m2/settings.xml
 
 ----------------------------------------------------------------------------------------------------------------------------------
+In Tomcat
+cd /opt/apache-tomcat-9.0.110/conf
+vim tomcat-users.xml
+
+  <role rolename="manager-script"/>
+  <role rolename="manager-gui"/>
+  <user username="tomcat" password="90199652" roles="manager-gui,manager-script"/>
+  <user username="deployer" password="90199652" roles="manager-script"/>
 
 
 
 
+
+
+----------------------------------------------------------------------------------------------------------------------------------
 
 
 
