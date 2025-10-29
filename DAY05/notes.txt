@@ -258,4 +258,61 @@ node {
     }
 }
 
+-----------------------------------------------------------------------------------------------------------------------------
+
+                            JENKINS PLUGINS IF DELETED
+
+
+IF IN CASE ANYTHING DELETED JENKINS PLUGINS , HOW TO RECOVER.!
+
+
+
+Perfect — that’s very helpful information 👍
+If you deleted some Jenkins plugins manually (especially from /var/lib/jenkins/plugins/ or /var/lib/jenkins/plugins.bak/), then yes — this is almost certainly why Jenkins UI is now blank / reset and the service fails to restart.
+When Jenkins starts, it checks all required plugins listed in your jobs and global configuration.
+If even one required plugin’s .jpi or .hpi file is missing or half-deleted, Jenkins startup will fail or run with a partial configuration, which is exactly what you’re seeing (“Welcome to Jenkins!” — as if it’s a fresh install).
+
+🧩 Step-by-step fix
+1️⃣ Check Jenkins logs for missing plugins
+Run:
+sudo tail -n 50 /var/log/jenkins/jenkins.log
+
+and look for lines like:
+SEVERE: Failed Loading plugin xyz
+java.io.IOException: dependency not found ...
+
+That will show which plugin(s) are missing or corrupted.
+
+2️⃣ Check what plugins remain
+Run:
+ls -l /var/lib/jenkins/plugins | wc -l
+ls -l /var/lib/jenkins/plugins | head
+
+If this folder is almost empty (or missing key .jpi files), Jenkins will fail to load existing jobs and pipelines.
+
+3️⃣ Restore plugins from backup
+You’re lucky — your earlier listing showed this 👇
+drwxr-xr-x. 97 jenkins jenkins 16384 Oct 22 17:20 plugins.bak
+
+So you have a complete backup folder!
+You can restore them like this:
+sudo systemctl stop jenkins
+sudo rm -rf /var/lib/jenkins/plugins
+sudo cp -r /var/lib/jenkins/plugins.bak /var/lib/jenkins/plugins
+sudo chown -R jenkins:jenkins /var/lib/jenkins/plugins
+sudo systemctl start jenkins
+
+Then open Jenkins in browser again (http://<your-public-ip>:8080).
+
+4️⃣ If it still fails to start
+Run these commands and share the result:
+sudo tail -n 30 /var/log/jenkins/jenkins.log
+sudo systemctl status jenkins -l
+
+That will confirm whether Jenkins is crashing because of plugin dependencies, config corruption, or version mismatch.
+
+Would you like me to walk you through restoring only the missing plugins instead of copying the full backup folder? (safer if you recently updated some plugins).
+
+
+
 
